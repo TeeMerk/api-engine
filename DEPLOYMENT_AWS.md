@@ -41,32 +41,57 @@ sudo usermod -aG docker ec2-user
 exit
 ```
 
----
+## 4. Database: RDS Setup (Recommended)
+For production persistence, use **AWS RDS** instead of a local Docker container.
 
-## 4. Deploying the Application
-Since we have a `docker-compose.yml` file, deployment is simple:
-
-1. **Clone the Repository**:
-   ```bash
-   git clone https://github.com/TeeMerk/api-engine.git
-   cd api-engine
-   ```
-
-2. **Run the Stack**:
-   ```bash
-   docker compose up -d
-   ```
-
-3. **Initialize the Database**:
-   The `api` container will run but needs the schema:
-   ```bash
-   docker compose exec api npx prisma db push
-   ```
+1.  **Create RDS Instance**:
+    - Go to **RDS** -> **Create Database**.
+    - Choose **PostgreSQL**.
+    - **Templates**: Free Tier.
+    - **Settings**: Set your Master username and Password.
+2.  **🎁 Automatic Connectivity (Smart Choice)**:
+    - Under **Connectivity**, look for **"Connect to an EC2 compute resource"**.
+    - Select your `api-engine-server` instance.
+    - **Impact**: AWS will automatically create the internal Security Group rules allowing your EC2 to talk to RDS. You won't have to manually edit inbound rules for Port 5432.
+3.  **Get connection string**:
+    - Once created, copy the **Endpoint**.
+    - Your URL will look like: `postgresql://username:password@endpoint:5432/postgres`.
 
 ---
 
-## 5. Security Group Configuration
-Ensure your EC2 Security Group has the following "Inbound Rules":
+## 5. Deploying the Application
+
+### Option A: Fully Dockerized (Local DB)
+Use this for testing or simple setups:
+```bash
+docker compose up -d
+```
+
+### Option B: Production (EC2 + RDS)
+1.  **Clone & Configure**:
+    ```bash
+    git clone https://github.com/TeeMerk/api-engine.git
+    cd api-engine
+    ```
+2.  **Define RDS URL**:
+    Create an `.env` file or export the variable:
+    ```bash
+    export DATABASE_URL="postgresql://user:pass@your-rds-endpoint:5432/dbname"
+    ```
+3.  **Run API & UI**:
+    Start only the application containers (skipping the local `db` service):
+    ```bash
+    docker compose up -d api ui
+    ```
+4.  **Sync Schema**:
+    ```bash
+    docker compose exec api npx prisma db push
+    ```
+
+---
+
+## 6. Security Group Configuration
+If you used the **"Connect to EC2"** feature for RDS, you only need to manage the external ports:
 
 | Protocol | Port | Source | Description |
 | :--- | :--- | :--- | :--- |
